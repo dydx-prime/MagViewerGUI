@@ -1,0 +1,13 @@
+Windows:
+open a terminal (powershell prob)
+py -m venv venv
+venv\scripts\activate
+
+pip install -r requirements.txt // install all packages within the requirements.txt file
+pip install <package> // for installing new packages
+pip freeze > requirements.txt // after adding new packages
+
+Linux:
+python3 -m venv venv
+source venv/bin/activate
+package install same as windows
