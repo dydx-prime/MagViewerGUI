@@ -1,0 +1,15 @@
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]       # covers .pyc .pyo .pyd
+
+# Session output folders (generated at runtime)
+session_*/
+
+# OS clutter
+.DS_Store
+Thumbs.db

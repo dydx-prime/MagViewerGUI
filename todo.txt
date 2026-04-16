@@ -1,6 +1,0 @@
-// Have by end of month hopefully
-- Convert Signals to proper Tesla readings
-
-- Enhance GUI by Creating a Heatmap with legends and whatnot
-
-- Look into implementing positional data 

@@ -1,13 +1,16 @@
 Windows:
-open a terminal (powershell prob)
-py -m venv venv
-venv\scripts\activate
+.\make.bat setup // create env + install requirements
+venv\Scripts\activate // enter env
+.\make.bat clean // delete env
+py main.py // launch app
 
-pip install -r requirements.txt // install all packages within the requirements.txt file
-pip install <package> // for installing new packages
-pip freeze > requirements.txt // after adding new packages
 
 Linux:
-python3 -m venv venv
-source venv/bin/activate
-package install same as windows
+make setup
+make run
+make clean
+
+General Commands:
+pip install -r requirements.txt // install all packages within the requirements.txt file
+pip install <package> // for installing new packages (look below)
+pip freeze > requirements.txt // after installing new packages
