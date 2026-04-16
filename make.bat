@@ -11,7 +11,8 @@ GOTO help
     echo [*] Creating virtual environment...
     py -m venv venv
     echo [*] Activating and installing requirements...
-    call venv\Scripts\activate && pip install -r requirements.txt
+    call venv\Scripts\activate
+    call pip install -r requirements.txt
     echo [*] Setup complete. Run: make.bat run
     GOTO end
 

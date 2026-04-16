@@ -93,7 +93,7 @@ class HeatmapWidget(QWidget):
 
         for i in range(101):
             ratio = i / 100
-            hue = int((1 - ratio) * 240)
+            hue = int((ratio) * 240)
             color = QColor.fromHsv(hue, 255, 255)
             gradient.setColorAt(ratio, color)
 

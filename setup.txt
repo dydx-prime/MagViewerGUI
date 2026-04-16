@@ -5,7 +5,7 @@ venv\Scripts\activate // enter env
 py main.py // launch app
 
 
-Linux:
+Linux(not suported yet):
 make setup
 make run
 make clean

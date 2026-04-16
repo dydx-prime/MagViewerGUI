@@ -16,5 +16,5 @@ ADC_MAX = 42000
 ADC_MIN = 0
 
 # Display range in mT
-MT_MIN = -135.0
+MT_MIN = -140.0
 MT_MAX = -45.0
