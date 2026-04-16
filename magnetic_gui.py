@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QFileDialog, QHBoxLayout
 )
 from PyQt6.QtSvg import QSvgGenerator
-from PyQt6.QtCore import QTimer, QRect, Qt
+from PyQt6.QtCore import QTimer, QRect, Qt, QPoint
 from PyQt6.QtGui import QPainter, QColor, QImage
 
 from config import (
@@ -17,6 +17,7 @@ from config import (
     DEMO_MODE, ADC_QUIESCENT, ADC_MAX, ADC_MIN, MT_MIN, MT_MAX
 )
 from heatmap_widget import HeatmapWidget
+from algorithm_overlay import AlgorithmPanel
 
 
 class MagneticGUI(QWidget):
@@ -26,10 +27,8 @@ class MagneticGUI(QWidget):
         self.setWindowTitle("Magnetic Tile Viewer")
         self.resize(1200, 700)
 
-        # Saves screen captures for final output image
         self.scan_blocks = []
 
-        # Dark theme styling
         self.setStyleSheet("""
             QWidget { background-color: #1e1e1e; color: white; font-size: 14px; }
             QPushButton {
@@ -126,6 +125,11 @@ class MagneticGUI(QWidget):
         self.scan_button.clicked.connect(self.toggle_auto_scan)
         control_panel.addWidget(self.scan_button)
 
+        # Algorithm Button
+        self.algo_button = QPushButton("⚙ Algorithms")
+        self.algo_button.clicked.connect(self.toggle_algorithm_panel)
+        control_panel.addWidget(self.algo_button)
+
         # Labels for # of Scans and Time Elapsed
         self.counter_label = QLabel("Scans: 0")
         self.counter_label.setFixedHeight(40)
@@ -139,10 +143,37 @@ class MagneticGUI(QWidget):
         self.time_label.hide()
         control_panel.addWidget(self.time_label)
 
+        # ----- Floating Algorithm Panel -----
+        self.algo_panel = AlgorithmPanel(self)
+        self.algo_panel.algorithms_changed.connect(self.heatmap.set_active_algorithms)
+        self.algo_panel.hide()
+
         # ----- Timer -----
         self.timer = QTimer()
         self.timer.timeout.connect(self.read_serial)
         self.timer.start(10)
+
+    # ------------------------------------------------------------------ #
+    #  Algorithm Panel                                                     #
+    # ------------------------------------------------------------------ #
+
+    def toggle_algorithm_panel(self):
+        if self.algo_panel.isVisible():
+            self.algo_panel.hide()
+        else:
+            self._position_algo_panel()
+            self.algo_panel.show()
+            self.algo_panel.raise_()
+
+    def _position_algo_panel(self):
+        """Position the panel floating over the top-left of the heatmap."""
+        heatmap_pos = self.heatmap.mapTo(self, QPoint(0, 0))
+        self.algo_panel.move(heatmap_pos.x() + 10, heatmap_pos.y() + 10)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.algo_panel.isVisible():
+            self._position_algo_panel()
 
     # ------------------------------------------------------------------ #
     #  Motion / Command Helpers                                            #
@@ -162,6 +193,7 @@ class MagneticGUI(QWidget):
         self.csv_button.hide()
         self.svg_button.hide()
         self.scan_button.hide()
+        self.algo_button.hide()
 
         self.motion_control_button.setText("Back")
 
@@ -190,6 +222,7 @@ class MagneticGUI(QWidget):
         self.csv_button.show()
         self.svg_button.show()
         self.scan_button.show()
+        self.algo_button.show()
         self.HOME_button.hide()
         self.STOP_button.hide()
         self.LIVE_button.hide()
