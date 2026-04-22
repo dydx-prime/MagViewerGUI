@@ -5,7 +5,7 @@ import numpy as np
 import serial
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QLabel,
-    QFileDialog, QHBoxLayout
+    QFileDialog, QHBoxLayout, QStackedLayout
 )
 from PyQt6.QtSvg import QSvgGenerator
 from PyQt6.QtCore import QTimer, QRect, Qt, QPoint
@@ -18,6 +18,7 @@ from config import (
 )
 from heatmap_widget import HeatmapWidget
 from algorithm_overlay import AlgorithmPanel
+from subtraction_widget import SubtractionWidget
 
 
 class MagneticGUI(QWidget):
@@ -69,18 +70,28 @@ class MagneticGUI(QWidget):
         self.scan_elapsed_timer.timeout.connect(self.update_elapsed_time)
         self.scan_elapsed_sec = 0
 
-        # ----- UI -----
+        # ----- Root layout: stacked (live view vs subtraction view) -----
+        self.stack = QStackedLayout()
+        root_widget = QWidget()
+        root_widget.setLayout(self.stack)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.addWidget(root_widget)
+
+        # ---- Page 0: Live view ----
+        live_page = QWidget()
+        live_layout = QHBoxLayout(live_page)
+        live_layout.setContentsMargins(0, 0, 0, 0)
+
         self.label = QLabel("Live")
-        main_layout = QHBoxLayout()
-        self.setLayout(main_layout)
 
-        # Heatmap on left
+        # Heatmap
         self.heatmap = HeatmapWidget()
-        main_layout.addWidget(self.heatmap, stretch=5)
+        live_layout.addWidget(self.heatmap, stretch=5)
 
-        # Control panel on right
+        # Control panel
         control_panel = QVBoxLayout()
-        main_layout.addLayout(control_panel, stretch=1)
+        live_layout.addLayout(control_panel, stretch=1)
 
         # Stepper Arm Buttons
         self.motion_control_button = QPushButton("Motion Control")
@@ -126,11 +137,16 @@ class MagneticGUI(QWidget):
         control_panel.addWidget(self.scan_button)
 
         # Algorithm Button
-        self.algo_button = QPushButton("⚙ Algorithms")
+        self.algo_button = QPushButton("Algorithms")
         self.algo_button.clicked.connect(self.toggle_algorithm_panel)
         control_panel.addWidget(self.algo_button)
 
-        # Labels for # of Scans and Time Elapsed
+        # Subtraction Mode Button
+        self.subtract_button = QPushButton("Subtraction Mode")
+        self.subtract_button.clicked.connect(self.enter_subtraction_mode)
+        control_panel.addWidget(self.subtract_button)
+
+        # Scan labels
         self.counter_label = QLabel("Scans: 0")
         self.counter_label.setFixedHeight(40)
         self.counter_label.setStyleSheet("font-size: 20px; font-weight: bold;")
@@ -143,6 +159,12 @@ class MagneticGUI(QWidget):
         self.time_label.hide()
         control_panel.addWidget(self.time_label)
 
+        self.stack.addWidget(live_page)   # index 0
+
+        # ---- Page 1: Subtraction view ----
+        self.subtraction_widget = SubtractionWidget(on_back=self.exit_subtraction_mode, on_send_cmd=self.send_cmd)
+        self.stack.addWidget(self.subtraction_widget)   # index 1
+
         # ----- Floating Algorithm Panel -----
         self.algo_panel = AlgorithmPanel(self)
         self.algo_panel.algorithms_changed.connect(self.heatmap.set_active_algorithms)
@@ -152,6 +174,17 @@ class MagneticGUI(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self.read_serial)
         self.timer.start(10)
+
+    # ------------------------------------------------------------------ #
+    #  Subtraction Mode                                                    #
+    # ------------------------------------------------------------------ #
+
+    def enter_subtraction_mode(self):
+        self.algo_panel.hide()
+        self.stack.setCurrentIndex(1)
+
+    def exit_subtraction_mode(self):
+        self.stack.setCurrentIndex(0)
 
     # ------------------------------------------------------------------ #
     #  Algorithm Panel                                                     #
@@ -166,7 +199,6 @@ class MagneticGUI(QWidget):
             self.algo_panel.raise_()
 
     def _position_algo_panel(self):
-        """Position the panel floating over the top-left of the heatmap."""
         heatmap_pos = self.heatmap.mapTo(self, QPoint(0, 0))
         self.algo_panel.move(heatmap_pos.x() + 10, heatmap_pos.y() + 10)
 
@@ -194,6 +226,7 @@ class MagneticGUI(QWidget):
         self.svg_button.hide()
         self.scan_button.hide()
         self.algo_button.hide()
+        self.subtract_button.hide()
 
         self.motion_control_button.setText("Back")
 
@@ -223,6 +256,7 @@ class MagneticGUI(QWidget):
         self.svg_button.show()
         self.scan_button.show()
         self.algo_button.show()
+        self.subtract_button.show()
         self.HOME_button.hide()
         self.STOP_button.hide()
         self.LIVE_button.hide()
@@ -246,7 +280,7 @@ class MagneticGUI(QWidget):
             self.scan_count = 0
             self.scan_elapsed_sec = 0
 
-            self.send_cmd("SCAN_SNAKE")
+            self.send_cmd("A8")
 
             self.counter_label.setText("Scans: 0")
             self.time_label.setText("Time: 0 s")
@@ -458,7 +492,15 @@ class MagneticGUI(QWidget):
             if self.calibration_count >= self.max_calibration_frames:
                 self.finish_calibration()
 
+        mt = self.map_to_millitesla(self.data)
         self.heatmap.update_data(self.data, self.calibration, self.calibrating)
+
+        # Feed subtraction widget if it's active
+        if self.stack.currentIndex() == 1:
+            adc = self.data.copy()
+            if not self.calibrating and np.any(self.calibration):
+                adc -= self.calibration
+            self.subtraction_widget.update_current(self.map_to_millitesla(adc))
 
     # ------------------------------------------------------------------ #
     #  Calibration                                                         #
